@@ -3,4 +3,6 @@
     "python.venvFolders": [
         "${workspaceFolder}\\.venv"
     ],
+    "python.linting.flake8Enabled": true,
+    "python.linting.enabled": true,
 }

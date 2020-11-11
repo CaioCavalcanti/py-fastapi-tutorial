@@ -1,3 +1,5 @@
+import uvicorn
+
 from fastapi import FastAPI
 from enum import Enum
 
@@ -46,3 +48,7 @@ async def get_model(model_name: ModelName):
         return {"model_name": model_name, "message": "LeCNN all the images"}
 
     return {"model_name": model_name, "message": "Have some residuals"}
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=8000)

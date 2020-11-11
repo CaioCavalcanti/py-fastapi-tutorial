@@ -8,7 +8,7 @@
             "name": "Launch FastAPI",
             "type": "python",
             "request": "launch",
-            "program": "main.py",
+            "program": "debugger.py",
             "console": "integratedTerminal"
         }
     ]

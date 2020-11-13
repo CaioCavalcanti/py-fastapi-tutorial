@@ -1,6 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from enum import Enum
-from typing import Optional
+from typing import List, Optional
 from pydantic import BaseModel
 
 app = FastAPI()
@@ -46,12 +46,23 @@ async def update_item(item_id: int, item: Item, q: Optional[str] = None):
 
 
 @app.get("/items/")
-async def read_item(skip: int = 0, limit: int = 10):
-    return fake_items_db[skip: skip + limit]
+async def read_item(skip: int = 0, limit: int = 10,
+                    q: Optional[List[str]] = Query(
+                        ["foo", "bar"],
+                        alias="item-query",
+                        title="Query string",
+                        description="Query string for the items to search in the database that have a good match.",
+                        min_length=3,
+                        deprecated=True)):
+    paged_items = fake_items_db[skip: skip + limit]
+    results = {"items": paged_items}
+    if q:
+        results.update({"q": q})
+    return results
 
 
 @app.get("/items/{item_id}")
-async def read_item(item_id: str, needy: str, q: Optional[str] = None, short: bool = False):
+async def read_item(item_id: str, needy: str, q: Optional[str] = Query(..., min_length=3), short: bool = False):
     """
     Get an item with the given item_id.
 

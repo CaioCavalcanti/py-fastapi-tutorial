@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Query, Path
+from fastapi import FastAPI, Query, Path, Body
 from enum import Enum
 from typing import List, Optional
 from pydantic import BaseModel
@@ -19,6 +19,11 @@ class Item(BaseModel):
     tax: Optional[float] = None
 
 
+class User(BaseModel):
+    username: str
+    full_name: Optional[str] = None
+
+
 fake_items_db = [{"item_name": "Foo"}, {
     "item_name": "Bar"}, {"item_name": "Baz"}]
 
@@ -29,7 +34,7 @@ async def root():
 
 
 @app.post("/items")
-async def create_item(item: Item, q: Optional[str] = None):
+async def create_item(item: Item = Body(..., embed=True), q: Optional[str] = None):
     item_dict = item.dict()
     if item.tax:
         price_with_tax = item.price + item.tax
@@ -38,8 +43,8 @@ async def create_item(item: Item, q: Optional[str] = None):
 
 
 @app.put("/items/{item_id}")
-async def update_item(item_id: int, item: Item, q: Optional[str] = None):
-    result = {"item_id": item_id, **item.dict()}
+async def update_item(item_id: int, item: Item, user: User, importance: int = Body(..., gt=0), q: Optional[str] = None):
+    result = {"item_id": item_id, "user": user, "importance": importance, **item.dict()}
     if q:
         result.update({"q": q})
     return result
@@ -68,7 +73,8 @@ async def read_item(
 @app.get("/items/{item_id}")
 async def read_item(
     *,
-    item_id: int = Path(..., title="The ID of the item to get.", ge=1, le=1000),
+    item_id: int = Path(..., title="The ID of the item to get.",
+                        ge=1, le=1000),
     needy: str,
     q: Optional[str] = Query(..., min_length=3),
     short: bool = False

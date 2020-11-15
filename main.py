@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Query, Path, Body
 from enum import Enum
-from typing import List, Optional
-from pydantic import BaseModel, Field
+from typing import List, Optional, Set, Dict
+from pydantic import BaseModel, Field, HttpUrl
 
 app = FastAPI()
 
@@ -10,6 +10,11 @@ class ModelName(str, Enum):
     alexnet = "alexnet"
     resnet = "resnet"
     lenet = "lenet"
+
+
+class Image(BaseModel):
+    url: HttpUrl
+    name: str
 
 
 class Item(BaseModel):
@@ -25,6 +30,15 @@ class Item(BaseModel):
         description="The price must be greater than zero"
     )
     tax: Optional[float] = None
+    tags: Set[str] = set()
+    images: Optional[List[Image]] = None
+
+
+class Offer(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    items: List[Item]
 
 
 class User(BaseModel):
@@ -52,7 +66,8 @@ async def create_item(item: Item = Body(..., embed=True), q: Optional[str] = Non
 
 @app.put("/items/{item_id}")
 async def update_item(item_id: int, item: Item, user: User, importance: int = Body(..., gt=0), q: Optional[str] = None):
-    result = {"item_id": item_id, "user": user, "importance": importance, **item.dict()}
+    result = {"item_id": item_id, "user": user,
+              "importance": importance, **item.dict()}
     if q:
         result.update({"q": q})
     return result
@@ -142,3 +157,17 @@ async def get_model(model_name: ModelName):
         return {"model_name": model_name, "message": "LeCNN all the images"}
 
     return {"model_name": model_name, "message": "Have some residuals"}
+
+
+@app.post("/offers/")
+async def create_offer(offer: Offer):
+    return offer
+
+
+@app.post("/images/multiple/")
+async def create_multiple_images(images: List[Image]):
+    return images
+
+@app.post("/index-weights/")
+async def create_intex_weights(weights: Dict[int, float]):
+    return weights

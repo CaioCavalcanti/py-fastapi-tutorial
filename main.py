@@ -33,11 +33,21 @@ class Item(BaseModel):
     tags: Set[str] = set()
     images: Optional[List[Image]] = None
 
+    class Config:
+        schema_extra = {
+            "example": {
+                "name": "Foo",
+                "description": "A very nice Item",
+                "price": 35.4,
+                "tax": 3.2
+            }
+        }
+
 
 class Offer(BaseModel):
-    name: str
-    description: Optional[str] = None
-    price: float
+    name: str = Field(..., example="Foo")
+    description: Optional[str] = Field(None, example="A very nice offer")
+    price: float = Field(..., example=35.7)
     items: List[Item]
 
 

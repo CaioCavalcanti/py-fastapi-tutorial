@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Query, Path, Body, Cookie
+from fastapi import FastAPI, Query, Path, Body, Cookie, Header
 from enum import Enum
 from typing import List, Optional, Set, Dict
 from uuid import UUID
@@ -98,10 +98,12 @@ async def read_item(
         min_length=3,
         deprecated=True
     ),
-    ads_id: Optional[str] = Cookie(None)
+    ads_id: Optional[str] = Cookie(None),
+    user_agent: Optional[str] = Header(None),
+    x_token: Optional[List[str]] = Header(None)
 ):
     paged_items = fake_items_db[skip: skip + limit]
-    results = {"items": paged_items, "ads_id": ads_id}
+    results = {"items": paged_items, "ads_id": ads_id, "User-Agent": user_agent, "X-Token values": x_token}
     if q:
         results.update({"q": q})
     return results

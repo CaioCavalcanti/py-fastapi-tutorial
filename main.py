@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Query, Path, Body
+from fastapi import FastAPI, Query, Path, Body, Cookie
 from enum import Enum
 from typing import List, Optional, Set, Dict
 from uuid import UUID
@@ -97,10 +97,11 @@ async def read_item(
         description="Query string for the items to search in the database that have a good match.",
         min_length=3,
         deprecated=True
-    )
+    ),
+    ads_id: Optional[str] = Cookie(None)
 ):
     paged_items = fake_items_db[skip: skip + limit]
-    results = {"items": paged_items}
+    results = {"items": paged_items, "ads_id": ads_id}
     if q:
         results.update({"q": q})
     return results

@@ -4,7 +4,7 @@ from typing import List, Optional, Set, Dict
 from uuid import UUID
 from datetime import datetime, time, timedelta
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, EmailStr
 
 app = FastAPI()
 
@@ -32,7 +32,7 @@ class Item(BaseModel):
         gt=0,
         description="The price must be greater than zero"
     )
-    tax: Optional[float] = None
+    tax: float = 10.5
     tags: Set[str] = set()
     images: Optional[List[Image]] = None
 
@@ -59,8 +59,28 @@ class User(BaseModel):
     full_name: Optional[str] = None
 
 
+class UserIn(BaseModel):
+    username: str
+    password: str
+    email: EmailStr
+    full_name: Optional[str] = None
+
+
+class UserOut(BaseModel):
+    username: str
+    email: EmailStr
+    full_name: Optional[str] = None
+
+
 fake_items_db = [{"item_name": "Foo"}, {
     "item_name": "Bar"}, {"item_name": "Baz"}]
+
+
+items = {
+    "foo": {"name": "Foo", "price": 50.2},
+    "bar": {"name": "Bar", "description": "The bartenders", "price": 62, "tax": 20.2},
+    "baz": {"name": "Baz", "description": None, "price": 50.2, "tax": 10.5, "tags": []},
+}
 
 
 @app.get("/")
@@ -68,7 +88,7 @@ async def root():
     return {"message": "Hello World"}
 
 
-@app.post("/items")
+@app.post("/items", response_model=Item)
 async def create_item(item: Item = Body(..., embed=True), q: Optional[str] = None):
     item_dict = item.dict()
     if item.tax:
@@ -103,17 +123,17 @@ async def read_item(
     x_token: Optional[List[str]] = Header(None)
 ):
     paged_items = fake_items_db[skip: skip + limit]
-    results = {"items": paged_items, "ads_id": ads_id, "User-Agent": user_agent, "X-Token values": x_token}
+    results = {"items": paged_items, "ads_id": ads_id,
+               "User-Agent": user_agent, "X-Token values": x_token}
     if q:
         results.update({"q": q})
     return results
 
 
-@app.get("/items/{item_id}")
+@app.get("/items/{item_id}", response_model=Item, response_model_exclude_unset=True)
 async def read_item(
     *,
-    item_id: int = Path(..., title="The ID of the item to get.",
-                        ge=1, le=1000),
+    item_id: str = Path(..., title="The ID of the item to get."),
     needy: str,
     q: Optional[str] = Query(..., min_length=3),
     short: bool = False
@@ -125,7 +145,8 @@ async def read_item(
     only use the str part), but the Optional[str] will let your editor
     help you finding errors in your code.
     """
-    item = {"item_id": item_id, "needy": needy}
+    item = items[item_id]
+    item.update({"needy": needy})
     if q:
         item.update({"q": q})
     if not short:
@@ -154,6 +175,33 @@ async def read_items_extra(
         "start_process": start_process,
         "duration": duration
     }
+
+
+@app.get(
+    "/items/{item_id}/name",
+    response_model=Item,
+    response_model_include={"name", "description"}
+)
+async def read_item_name(item_id: str):
+    return items[item_id]
+
+
+@app.get("/items/{item_id}/public", response_model=Item, response_model_exclude=["tax"])
+async def read_item_public_data(item_id: str):
+    return items[item_id]
+
+
+@app.post("/users", response_model=UserOut)
+async def create_user(user: UserIn):
+    """
+    Create an user.
+
+    Here, even though our path operation function is returning the
+    same input user that contains the password, we declared the
+    response_model to be our model UserOut, that doesn't include
+    the password.
+    """
+    return user
 
 
 @app.get("/users/me")

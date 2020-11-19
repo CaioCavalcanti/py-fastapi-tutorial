@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Query, Path, Body, Cookie, Header
 from enum import Enum
-from typing import List, Optional, Set, Dict
+from typing import List, Optional, Set, Dict, Union
 from uuid import UUID
 from datetime import datetime, time, timedelta
 
@@ -54,22 +54,40 @@ class Offer(BaseModel):
     items: List[Item]
 
 
-class User(BaseModel):
+class UserBase(BaseModel):
     username: str
+    email: str
     full_name: Optional[str] = None
 
 
-class UserIn(BaseModel):
-    username: str
+class User(UserBase):
+    pass
+
+
+class UserIn(UserBase):
     password: str
-    email: EmailStr
-    full_name: Optional[str] = None
 
 
-class UserOut(BaseModel):
-    username: str
-    email: EmailStr
-    full_name: Optional[str] = None
+class UserOut(UserBase):
+    pass
+
+
+class UserInDb(UserBase):
+    hashed_password: str
+
+
+class BaseItem(BaseModel):
+    description: str
+    type: str
+
+
+class CarItem(BaseItem):
+    type = "car"
+
+
+class PlaneItem(BaseItem):
+    type = "plane"
+    size = int
 
 
 fake_items_db = [{"item_name": "Foo"}, {
@@ -81,6 +99,26 @@ items = {
     "bar": {"name": "Bar", "description": "The bartenders", "price": 62, "tax": 20.2},
     "baz": {"name": "Baz", "description": None, "price": 50.2, "tax": 10.5, "tags": []},
 }
+
+extra_items = {
+    "item1": {"description": "All my friends drive a low rider", "type": "car"},
+    "item2": {
+        "description": "Music is my aeroplane, it's my aeroplane",
+        "type": "plane",
+        "size": 5
+    }
+}
+
+
+def fake_password_hasher(raw_password: str):
+    return "supersecret" + raw_password
+
+
+def fake_save_user(user_in: UserIn):
+    hashed_password = fake_password_hasher(user_in.password)
+    user_in_db = UserInDb(**user_in.dict(), hashed_password=hashed_password)
+    print("User saved! ..not really")
+    return user_in_db
 
 
 @app.get("/")
@@ -201,7 +239,8 @@ async def create_user(user: UserIn):
     response_model to be our model UserOut, that doesn't include
     the password.
     """
-    return user
+    user_saved = fake_save_user(user_in)
+    return user_saved
 
 
 @app.get("/users/me")
@@ -257,3 +296,17 @@ async def create_multiple_images(images: List[Image]):
 @app.post("/index-weights/")
 async def create_intex_weights(weights: Dict[int, float]):
     return weights
+
+
+@app.get("/extra-items/", response_model=List[Item])
+async def read_extra_items():
+    return items
+
+
+@app.get("/extra-items/{item_id}", response_model=Union[PlaneItem, CarItem])
+async def read_extra_item(item_id: str):
+    return extra_items[item_id]
+
+@app.get("/arbitrary-dict/", response_model=Dict[str, float])
+async def read_arbitrary_dict():
+    return {"foo": 2.3, "bar": 3.4}
